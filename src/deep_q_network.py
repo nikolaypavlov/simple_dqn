@@ -122,7 +122,7 @@ class DQN:
         assert mask.sum() == self.batch_size * (self.num_actions - 1)
         assert maxQ_mask.sum() == self.batch_size
         assert net_output.shape == (self.batch_size, self.num_actions)
-        assert (targets == net_output).sum() == self.batch_size * (self.num_actions - 1)
+        assert np.isclose(targets, net_output).sum() >= self.batch_size * (self.num_actions - 1)
         assert deltas.shape == (self.batch_size, self.num_actions)
 
         # increase number of weight updates (needed for target clone interval)
