@@ -164,5 +164,6 @@ class DQN:
         lasagne.layers.set_all_param_values(self.model, params[1])
 
     def _sync_target_network(self):
+        logger.info("Syncing weights with the target network")
         net_params = lasagne.layers.get_all_param_values(self.model)
         lasagne.layers.set_all_param_values(self.target_model, net_params)
