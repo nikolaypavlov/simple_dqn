@@ -10,9 +10,6 @@ from lasagne.layers import InputLayer, DenseLayer, Conv2DLayer, batch_norm
 from lasagne.regularization import regularize_network_params, l2
 from lasagne.objectives import squared_error
 
-# Number of units in the hidden (recurrent) layer
-N_HIDDEN = 256
-
 class DQN:
     def __init__(self, num_actions, args):
         # remember parameters
@@ -50,10 +47,11 @@ class DQN:
 
     def _build_network(self):
         l_in = InputLayer(self.input_shape, name="input")
-        l_1 = batch_norm(Conv2DLayer(l_in, num_filters=16, filter_size=(8, 8), stride=4, nonlinearity=lasagne.nonlinearities.rectify, name="conv1"))
-        l_2 = batch_norm(Conv2DLayer(l_1, num_filters=32, filter_size=(4, 4), stride=2, nonlinearity=lasagne.nonlinearities.rectify, name="conv2"))
-        l_3 = batch_norm(DenseLayer(l_2, num_units=N_HIDDEN, nonlinearity=lasagne.nonlinearities.rectify, name="fc1"))
-        l_out = DenseLayer(l_3, num_units=self.num_actions, nonlinearity=lasagne.nonlinearities.identity, name="out")
+        l_1 = batch_norm(Conv2DLayer(l_in, num_filters=32, filter_size=(8, 8), stride=4, nonlinearity=lasagne.nonlinearities.rectify, name="conv1"))
+        l_2 = batch_norm(Conv2DLayer(l_1, num_filters=64, filter_size=(4, 4), stride=2, nonlinearity=lasagne.nonlinearities.rectify, name="conv2"))
+        l_3 = batch_norm(Conv2DLayer(l_2, num_filters=64, filter_size=(3, 3), stride=1, nonlinearity=lasagne.nonlinearities.rectify, name="conv3"))
+        l_4 = batch_norm(DenseLayer(l_3, num_units=512, nonlinearity=lasagne.nonlinearities.rectify, name="fc1"))
+        l_out = DenseLayer(l_4, num_units=self.num_actions, nonlinearity=lasagne.nonlinearities.identity, name="out")
 
         return l_out, l_in.input_var
 

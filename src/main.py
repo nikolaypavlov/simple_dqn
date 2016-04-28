@@ -14,7 +14,7 @@ import os
 parser = argparse.ArgumentParser()
 
 def str2bool(v):
-        return v.lower() in ("yes", "true", "t", "1")
+    return v.lower() in ("yes", "true", "t", "1")
 
 envarg = parser.add_argument_group('Environment')
 envarg.add_argument("rom_file")
