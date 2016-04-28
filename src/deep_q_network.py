@@ -45,8 +45,8 @@ class DQN:
 
     def _build_network(self):
         l_in = InputLayer(self.input_shape, name="input")
-        l_1 = Conv2DLayer(l_in, num_filters=16, filter_size=(8, 8), stride=4, nonlinearity=lasagne.nonlinearities.rectify, name="conv1")
-        l_2 = Conv2DLayer(l_1, num_filters=32, filter_size=(4, 4), stride=2, nonlinearity=lasagne.nonlinearities.rectify, name="conv2")
+        l_1 = batch_norm(Conv2DLayer(l_in, num_filters=16, filter_size=(8, 8), stride=4, nonlinearity=lasagne.nonlinearities.rectify, name="conv1"))
+        l_2 = batch_norm(Conv2DLayer(l_1, num_filters=32, filter_size=(4, 4), stride=2, nonlinearity=lasagne.nonlinearities.rectify, name="conv2"))
         l_3 = batch_norm(DenseLayer(l_2, num_units=N_HIDDEN, nonlinearity=lasagne.nonlinearities.rectify, name="fc1"))
         l_out = DenseLayer(l_3, num_units=self.num_actions, nonlinearity=lasagne.nonlinearities.identity, name="out")
 
