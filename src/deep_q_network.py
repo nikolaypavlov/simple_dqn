@@ -22,7 +22,8 @@ class DQN:
         self.history_length = args.history_length
         self.screen_dim = (args.screen_height, args.screen_width)
         self.input_shape = (self.batch_size,) + (self.history_length,) + self.screen_dim
-        self.decay = args.decay_rate
+        self.decay_rate = args.decay_rate
+        self.weight_decay = args.weight_decay
 
         # create Theano model
         self.model, self.model_train, self.model_predict = self._create_network()
@@ -80,7 +81,7 @@ class DQN:
 
         # Add regularization penalty
         deltas = squared_error(network_output, targets)
-        loss = deltas.mean() + regularize_network_params(net, l2) * self.decay
+        loss = deltas.mean() + regularize_network_params(net, l2) * self.weight_decay
 
         # Retrieve all parameters from the network
         all_params = lasagne.layers.get_all_params(net, trainable=True)

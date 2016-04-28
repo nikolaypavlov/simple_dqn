@@ -41,6 +41,7 @@ netarg.add_argument("--discount_rate", type=float, default=0.99, help="Discount 
 netarg.add_argument("--batch_size", type=int, default=32, help="Batch size for neural network.")
 netarg.add_argument('--optimizer', choices=['adadelta'], default='adadelta', help='Network optimization algorithm.')
 netarg.add_argument("--decay_rate", type=float, default=0.95, help="Decay rate for RMSProp and Adadelta algorithms.")
+netarg.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay for regularization")
 netarg.add_argument("--clip_error", type=float, default=1, help="Clip error term in update between this number and its negative.")
 netarg.add_argument("--target_steps", type=int, default=10000, help="Copy main network to target network after this many steps.")
 
