@@ -25,13 +25,17 @@ class DQN:
         self.decay_rate = args.decay_rate
         self.weight_decay = args.weight_decay
 
-        # create Theano model
-        self.model, self.model_train, self.model_predict = self._create_network()
-
         if args.optimizer == 'adadelta':
             self.optimizer = lasagne.updates.adadelta
+            self.learning_rate = 1.0
+        elif args.optimizer == 'rmsprop':
+            self.optimizer = lasagne.updates.rmsprop
+            self.learning_rate = args.learning_rate
         else:
             assert False, "Unknown optimizer"
+
+        # create Theano model
+        self.model, self.model_train, self.model_predict = self._create_network()
 
         # create target model
         self.target_steps = args.target_steps
@@ -86,8 +90,8 @@ class DQN:
         # Retrieve all parameters from the network
         all_params = lasagne.layers.get_all_params(net, trainable=True)
 
-        # Compute SGD updates for training
-        updates = lasagne.updates.adadelta(loss, all_params)
+        # Compute updates for training
+        updates = self.optimizer(loss, all_params, learning_rate=self.learning_rate, rho=self.decay_rate)
 
         # Theano functions for training and computing cost
         logger.info("Compiling functions ...")
@@ -164,6 +168,6 @@ class DQN:
         lasagne.layers.set_all_param_values(self.model, params[1])
 
     def _sync_target_network(self):
-        logger.info("Syncing weights with the target network")
+        logger.info("Syncing main network to target network")
         net_params = lasagne.layers.get_all_param_values(self.model)
         lasagne.layers.set_all_param_values(self.target_model, net_params)
