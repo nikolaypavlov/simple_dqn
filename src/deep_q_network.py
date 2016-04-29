@@ -21,6 +21,7 @@ class DQN:
         self.input_shape = (self.batch_size,) + (self.history_length,) + self.screen_dim
         self.decay_rate = args.decay_rate
         self.weight_decay = args.weight_decay
+        self.clip_error = args.clip_error
 
         if args.optimizer == 'adadelta':
             self.optimizer = lasagne.updates.adadelta
@@ -47,11 +48,11 @@ class DQN:
 
     def _build_network(self):
         l_in = InputLayer(self.input_shape, name="input")
-        l_1 = batch_norm(Conv2DLayer(l_in, num_filters=32, filter_size=(8, 8), stride=4, nonlinearity=lasagne.nonlinearities.rectify, name="conv1"))
-        l_2 = batch_norm(Conv2DLayer(l_1, num_filters=64, filter_size=(4, 4), stride=2, nonlinearity=lasagne.nonlinearities.rectify, name="conv2"))
-        l_3 = batch_norm(Conv2DLayer(l_2, num_filters=64, filter_size=(3, 3), stride=1, nonlinearity=lasagne.nonlinearities.rectify, name="conv3"))
-        l_4 = batch_norm(DenseLayer(l_3, num_units=512, nonlinearity=lasagne.nonlinearities.rectify, name="fc1"))
-        l_out = DenseLayer(l_4, num_units=self.num_actions, nonlinearity=lasagne.nonlinearities.identity, name="out")
+        l_1 = Conv2DLayer(l_in, num_filters=32, filter_size=(8, 8), stride=4, nonlinearity=lasagne.nonlinearities.rectify, name="conv1")
+        l_2 = Conv2DLayer(l_1, num_filters=64, filter_size=(4, 4), stride=2, nonlinearity=lasagne.nonlinearities.rectify, name="conv2")
+        l_3 = Conv2DLayer(l_2, num_filters=64, filter_size=(3, 3), stride=1, nonlinearity=lasagne.nonlinearities.rectify, name="conv3")
+        l_4 = DenseLayer(l_3, num_units=512, nonlinearity=lasagne.nonlinearities.rectify, name="fc1")
+        l_out = DenseLayer(l_4, num_units=self.num_actions, nonlinearity=lasagne.nonlinearities.identity, W=lasagne.init.Normal(), name="out")
 
         return l_out, l_in.input_var
 
@@ -90,6 +91,8 @@ class DQN:
 
         # Compute updates for training
         updates = self.optimizer(loss, all_params, learning_rate=self.learning_rate, rho=self.decay_rate)
+        if self.clip_error:
+            updates = lasagne.updates.norm_constraint(updates, self.clip_error)
 
         # Theano functions for training and computing cost
         logger.info("Compiling functions ...")
