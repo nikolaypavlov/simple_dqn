@@ -90,9 +90,12 @@ class DQN:
         all_params = lasagne.layers.get_all_params(net, trainable=True)
 
         # Compute updates for training
-        updates = self.optimizer(loss, all_params, learning_rate=self.learning_rate, rho=self.decay_rate)
         if self.clip_error:
-            updates = lasagne.updates.norm_constraint(updates, self.clip_error)
+            grads = theano.gradient.grad(loss, all_params)
+            grads = [lasagne.updates.norm_constraint(grad, self.clip_error, range(grad.ndim)) for grad in grads]
+            updates = self.optimizer(grads, all_params, learning_rate=self.learning_rate, rho=self.decay_rate)
+        else:
+            updates = self.optimizer(loss, all_params, learning_rate=self.learning_rate, rho=self.decay_rate)
 
         # Theano functions for training and computing cost
         logger.info("Compiling functions ...")
