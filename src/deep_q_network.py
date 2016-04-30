@@ -84,7 +84,9 @@ class DQN:
 
         # Add regularization penalty
         deltas = squared_error(network_output, targets)
-        loss = deltas.mean() + regularize_network_params(net, l2) * self.weight_decay
+        loss = deltas.mean()
+        if self.weight_decay > 0.0:
+            loss += regularize_network_params(net, l2) * self.weight_decay
 
         # Retrieve all parameters from the network
         all_params = lasagne.layers.get_all_params(net, trainable=True)
