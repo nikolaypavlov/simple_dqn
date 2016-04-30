@@ -59,7 +59,7 @@ class DQN:
     def _create_target_network(self):
         logger.info("Building network with fixed weights...")
         net, input_var = self._build_network()
-        predict = theano.function([input_var], lasagne.layers.get_output(net))
+        predict = theano.function([input_var], lasagne.layers.get_output(net, input_var / 255.0))
 
         return net, predict
 
@@ -72,15 +72,14 @@ class DQN:
         # Create masks
         mask = theano.shared(np.ones((self.batch_size, self.num_actions)).astype(np.int32))
         mask = T.set_subtensor(mask[np.arange(self.batch_size), maxQ_idx], 0)
-
-        maxQ_mask = theano.shared(np.zeros((self.batch_size, self.num_actions)).astype(np.int32))
-        maxQ_mask = T.set_subtensor(maxQ_mask[np.arange(self.batch_size), maxQ_idx], 1)
+        target_mask = theano.shared(np.zeros((self.batch_size, self.num_actions)).astype(np.int32))
+        target_mask = T.set_subtensor(target_mask[np.arange(self.batch_size), maxQ_idx], 1)
 
         # feed-forward path
-        network_output = lasagne.layers.get_output(net)
+        network_output = lasagne.layers.get_output(net, input_var / 255.0)
 
         # update targets to be equial to the network output for all values except maxQs
-        targets = target_values * maxQ_mask + network_output * mask
+        targets = target_values * target_mask + network_output * mask
 
         # Add regularization penalty
         deltas = squared_error(network_output, targets)
@@ -101,8 +100,8 @@ class DQN:
 
         # Theano functions for training and computing cost
         logger.info("Compiling functions ...")
-        train = theano.function([input_var, target_values], [loss, deltas, targets, network_output, mask, maxQ_mask, maxQ_idx], updates=updates)
-        predict = theano.function([input_var], lasagne.layers.get_output(net))
+        train = theano.function([input_var, target_values], [loss, deltas, targets, network_output, mask, target_mask, maxQ_idx], updates=updates)
+        predict = theano.function([input_var], network_output)
 
         return net, train, predict
 
@@ -128,10 +127,16 @@ class DQN:
         maxpostq = np.max(postq, axis=1)
         assert maxpostq.shape == (self.batch_size, )
 
+        for i, action in enumerate(actions):
+            if terminals[i]:
+                postq[i, action] = float(rewards[i])
+            else:
+                postq[i, action] = float(rewards[i]) + self.discount_rate * maxpostq[i]
+
         # train network
-        loss, deltas, targets, net_output, mask, maxQ_mask, _ = self.model_train(prestates, postq)
+        loss, deltas, targets, net_output, mask, target_mask, _ = self.model_train(prestates, postq)
         assert mask.sum() == self.batch_size * (self.num_actions - 1)
-        assert maxQ_mask.sum() == self.batch_size
+        assert target_mask.sum() == self.batch_size
         assert net_output.shape == (self.batch_size, self.num_actions)
         assert np.isclose(targets, net_output).sum() >= self.batch_size * (self.num_actions - 1)
         assert deltas.shape == (self.batch_size, self.num_actions)
