@@ -67,23 +67,18 @@ class DQN:
         logger.info("Building network ...")
         net, input_var = self._build_network()
         target_values = T.matrix('target_output')
-        maxQ_idx = target_values.argmax(1)
+        actions = T.icol('actions')
 
         # Create masks
-        mask = theano.shared(np.ones((self.batch_size, self.num_actions)).astype(np.int32))
-        mask = T.set_subtensor(mask[np.arange(self.batch_size), maxQ_idx], 0)
-        target_mask = theano.shared(np.zeros((self.batch_size, self.num_actions)).astype(np.int32))
-        target_mask = T.set_subtensor(target_mask[np.arange(self.batch_size), maxQ_idx], 1)
+        # mask = theano.shared(np.zeros((self.batch_size, self.num_actions)).astype(np.int32))
+        mask = T.zeros_like(target_values)
+        mask = T.set_subtensor(mask[T.arange(self.batch_size), actions.reshape((-1,))], 1)
 
         # feed-forward path
         network_output = lasagne.layers.get_output(net, input_var / 255.0)
 
-        # update targets to be equial to the network output for all values except maxQs
-        targets = target_values * target_mask + network_output * mask
-
         # Add regularization penalty
-        deltas = squared_error(network_output, targets)
-        loss = deltas.mean()
+        loss = squared_error(network_output * mask, target_values).mean()
         if self.weight_decay > 0.0:
             loss += regularize_network_params(net, l2) * self.weight_decay
 
@@ -100,7 +95,7 @@ class DQN:
 
         # Theano functions for training and computing cost
         logger.info("Compiling functions ...")
-        train = theano.function([input_var, target_values], [loss, deltas, targets, network_output, mask, target_mask, maxQ_idx], updates=updates)
+        train = theano.function([input_var, target_values, actions], [loss, network_output, target_values, mask], updates=updates)
         predict = theano.function([input_var], network_output)
 
         return net, train, predict
@@ -127,19 +122,18 @@ class DQN:
         maxpostq = np.max(postq, axis=1)
         assert maxpostq.shape == (self.batch_size, )
 
+        targets = np.zeros_like(postq)
         for i, action in enumerate(actions):
             if terminals[i]:
-                postq[i, action] = float(rewards[i])
+                targets[i, action] = float(rewards[i])
             else:
-                postq[i, action] = float(rewards[i]) + self.discount_rate * maxpostq[i]
+                targets[i, action] = float(rewards[i]) + self.discount_rate * maxpostq[i]
 
         # train network
-        loss, deltas, targets, net_output, mask, target_mask, _ = self.model_train(prestates, postq)
-        assert mask.sum() == self.batch_size * (self.num_actions - 1)
-        assert target_mask.sum() == self.batch_size
+        loss, net_output, targets, mask = self.model_train(prestates, targets, actions.reshape((actions.shape[0], -1)))
+        assert mask.sum() == self.batch_size == mask[range(self.batch_size), actions].sum()
         assert net_output.shape == (self.batch_size, self.num_actions)
-        assert np.isclose(targets, net_output).sum() >= self.batch_size * (self.num_actions - 1)
-        assert deltas.shape == (self.batch_size, self.num_actions)
+        assert (~np.isclose(targets, net_output * mask)).sum() <= self.batch_size
 
         # increase number of weight updates (needed for target clone interval)
         self.train_iterations += 1
