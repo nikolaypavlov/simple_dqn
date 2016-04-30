@@ -1,7 +1,7 @@
 import logging
 logging.basicConfig(format='%(asctime)s %(message)s')
 
-from environment import Environment
+from environment import ALEEnvironment, GymEnvironment
 from replay_memory import ReplayMemory
 from deep_q_network import DQN
 from agent import Agent
@@ -9,7 +9,6 @@ from statistics import Statistics
 import random
 import argparse
 import sys
-import os
 
 parser = argparse.ArgumentParser()
 
@@ -17,7 +16,8 @@ def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
 
 envarg = parser.add_argument_group('Environment')
-envarg.add_argument("rom_file")
+envarg.add_argument("game", help="ROM bin file or env id such as Breakout-v0 if training with Open AI Gym.")
+envarg.add_argument("--environment", choices=["ale", "gym"], default="ale", help="Whether to train agent using ALE or OpenAI Gym.")
 envarg.add_argument("--display_screen", type=str2bool, default=False, help="Display game screen during training and testing.")
 envarg.add_argument("--frame_skip", type=int, default=4, help="How many times to repeat each chosen action.")
 envarg.add_argument("--repeat_action_probability", type=float, default=0, \
@@ -81,7 +81,16 @@ if args.random_seed:
         random.seed(args.random_seed)
 
 # instantiate classes
-env = Environment(args.rom_file, args)
+if args.environment == 'ale':
+  env = ALEEnvironment(args.game, args)
+  logger.info("Using ALE Environment")
+elif args.environment == 'gym':
+  logger.handlers.pop()
+  env = GymEnvironment(args.game, args)
+  logger.info("Using Gym Environment")
+else:
+  assert False, "Unknown environment" + args.environment
+
 mem = ReplayMemory(args.replay_size, args)
 net = DQN(env.numActions(), args)
 agent = Agent(env, mem, net, args)

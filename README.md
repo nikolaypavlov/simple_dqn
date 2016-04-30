@@ -2,7 +2,8 @@
 
 Deep Q-learning agent for replicating DeepMind's results in paper ["Human-level control through deep reinforcement learning"](http://www.nature.com/nature/journal/v518/n7540/full/nature14236.html). It is designed to be simple, fast and easy to extend. In particular:
  * It's Python :).
- * ALE [native Python interface](https://github.com/bbitmaster/ale_python_interface/wiki/Code-Tutorial) is used.
+ * Uses ALE [native Python interface](https://github.com/bbitmaster/ale_python_interface/wiki/Code-Tutorial).
+ * Updated to support training and testing with [OpenAI Gym](https://gym.openai.com/).
  * [Fastest convolutions](https://github.com/soumith/convnet-benchmarks) from [Neon deep learning library](http://neon.nervanasys.com/docs/latest/index.html).
  * Every screen is kept only once in replay memory, fast minibatch sampling with Numpy array slicing.
  * The number of array and datatype conversions is minimized.
@@ -12,11 +13,9 @@ See the example gameplay videos for Breakout and Pong:
 [![Breakout](http://img.youtube.com/vi/KkIf0Ok5GCE/default.jpg)](https://youtu.be/KkIf0Ok5GCE)
 [![Pong](http://img.youtube.com/vi/0ZlgrQS3krg/default.jpg)](https://youtu.be/0ZlgrQS3krg)
 
-Restriction from Neon is, that it currently works only on Maxwell architecture GPU-s. Hopefully this [will change](https://github.com/NervanaSystems/neon/issues/80). You can still simulate playing from pretrained models using just CPU, see the example below.
-
 ## Installation
 
-Currently only instructions for Ubuntu are provided. For OS X refer to [ALE](https://github.com/mgbellemare/Arcade-Learning-Environment/blob/master/doc/manual/manual.pdf) and [Neon](http://neon.nervanasys.com/docs/latest/user_guide.html#installation) documentation.
+Currently only instructions for Ubuntu are provided. For OS X refer to [ALE](https://github.com/mgbellemare/Arcade-Learning-Environment/blob/master/doc/manual/manual.pdf) and [Neon](http://neon.nervanasys.com/docs/latest/installation.html) documentation.
 
 ### Neon
 
@@ -29,11 +28,8 @@ Check out and compile the code:
 ```
 git clone https://github.com/NervanaSystems/neon.git
 cd neon
-git checkout 7a56fa9645a51e97c05f2e5afbbd1df7057ae832
 make
 ```
-
-**NB!** Currently there are issues with the latest Neon. Known good commit is [7a56fa9](https://github.com/NervanaSystems/neon/commit/7a56fa9645a51e97c05f2e5afbbd1df7057ae832). For details refer to https://github.com/tambetm/simple_dqn/issues/4.
 
 If you want to try out the filter visualization, use latest Neon and run `make -e VIS=true` instead. If you’ve already installed Neon without enabling visualization dependencies you’ll need to `touch vis_requirements.txt` prior to the `make -e VIS=true` call to ensure virtualenv Python dependencies get triggered.
 
@@ -42,7 +38,9 @@ Neon installs itself into virtual environment in `.venv`. You need to activate t
 source .venv/bin/activate
 ```
 
-### Arcade Learning Environment
+### Environment
+
+#### Arcade Learning Environment (optional if using OpenAI Gym)
 
 Install prerequisites:
 ```
@@ -58,6 +56,13 @@ make -j 4
 Install Python library (assuming you have activated Neon virtual environment):
 ```
 pip install .
+```
+
+#### OpenAI Gym (optional if using ALE)
+
+```
+pip install gym
+pip install gym[atari]
 ```
 
 ### Simple DQN
@@ -77,7 +82,7 @@ ln -s /usr/lib/python2.7/dist-packages/cv2.so NEON_HOME/.venv/lib/python2.7/site
 
 Then just check out the code:
 ```
-git clone https://github.com/tambetm/simple_dqn.git
+git clone https://github.com/tambetm/simple_dqn
 cd simple_dqn
 ```
 
@@ -101,7 +106,23 @@ To run training for Breakout:
 ```
 ./train.sh roms/breakout.bin
 ```
+
+If using OpenAI Gym:
+```
+./train.sh Breakout-v0 --environment gym
+```
+
 There are plethora of options, just run `./train.sh --help` to see them. While training, the network weights are saved to `snapshots` folder after each epoch. Name of the file is `<game>_<epoch_nr>.pkl`. Training statistics are saved to `results/<game>.csv`, see below how to produce plots from it.
+
+#### Training with Nervana Cloud
+
+To train a model with Nervana Cloud, first install and configure [Nervana Cloud](http://doc.cloud.nervanasys.com/docs/latest/ncloud.html).
+
+Assuming the necessary dependencies are installed, run
+```
+ncloud train src/main.py --args "roms/breakout.bin --save_weights_prefix snapshopts/breakout --csv_file results/breakout.csv" --custom_code_url https://github.com/NervanaSystems/simple_dqn
+```
+This will download the repo and run the training script.
 
 ### Resuming training
 
@@ -116,6 +137,19 @@ Pay attention, that exploration rate starts from 1 and replay memory is empty. T
 To run only testing on a pre-trained model:
 ```
 ./test.sh snapshots/breakout_77.pkl
+```
+
+To test using OpenAI Gym:
+```
+python src/test_gym.py Breakout-v0 <output_folder> --load_weights snapshots/breakout_77.pkl
+```
+After which you can then upload your results to OpenAI Gym. Note that the OpenAI Gym environment differs from the default environment so testing using OpenAI Gym should use a model trained using OpenAI Gym.
+
+#### Testing with Nervana Cloud
+
+To test a model using Nervana Cloud run:
+```
+ncloud train src/main.py --args "roms/breakout.bin --random_steps 0 --train_steps 0 --epochs 1 --load_weights snapshops/breakout_77.pkl" --custom_code_url https://github.com/NervanaSystems/simple_dqn
 ```
 
 ### Play one game with visualization
