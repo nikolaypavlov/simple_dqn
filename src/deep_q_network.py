@@ -43,6 +43,7 @@ class DQN:
             self.save_weights_prefix = args.save_weights_prefix
         else:
             self.target_model = self.model
+            self.predict_target = self.model_predict
 
         self.callback = None
 
