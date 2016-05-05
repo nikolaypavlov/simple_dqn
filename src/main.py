@@ -7,11 +7,9 @@ from deep_q_network import DQN
 from deepqnetwork import DeepQNetwork
 from agent import Agent
 from statistics import Statistics
-from neon.backends import gen_backend
 import random
 import argparse
 import sys
-import numpy as np
 
 parser = argparse.ArgumentParser()
 
@@ -103,15 +101,8 @@ elif args.environment == 'gym':
 else:
     assert False, "Unknown environment" + args.environment
 
-backend = gen_backend(backend = args.backend,
-                 batch_size = args.batch_size,
-                 rng_seed = args.random_seed,
-                 device_id = args.device_id,
-                 datatype = np.dtype(args.datatype).type,
-                 stochastic_round = args.stochastic_round)
-
-mem = ReplayMemory(args.replay_size, backend, args)
-net = DeepQNetwork(env.numActions(), backend, args)
+mem = ReplayMemory(args.replay_size, args)
+net = DeepQNetwork(env.numActions(), args)
 agent = Agent(env, mem, net, args)
 stats = Statistics(agent, net, mem, env, args)
 
