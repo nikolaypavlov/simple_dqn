@@ -22,6 +22,7 @@ class DeepQNetwork:
         self.screen_dim = (args.screen_height, args.screen_width)
         self.clip_error = args.clip_error
         self.batch_norm = args.batch_norm
+        self.double_dqn = args.double_dqn
 
         # create Neon backend
         self.be = gen_backend(backend=args.backend,
@@ -112,13 +113,25 @@ class DeepQNetwork:
             pdict = self.model.get_description(get_weights=True)
             self.target_model.deserialize(pdict, load_states=False)
 
-        # feed-forward pass for poststates to get Q-values
         self._setInput(poststates)
-        postq = self.target_model.fprop(self.input, inference=True)
-        assert postq.shape == (self.num_actions, self.batch_size)
 
-        # calculate max Q-value for each poststate
-        maxpostq = self.be.max(postq, axis=0).asnumpyarray()
+        if self.double_dqn:
+            # feed-forward pass for poststates to get argmax estimate
+            postq_est = self.model.fprop(self.input, inference=True)
+            max_idx = self.be.argmax(postq_est, axis=0).asnumpyarray().astype(np.intp)
+            assert max_idx.shape == (1, self.batch_size)
+
+            # feed-forward pass for poststates to get max Q-value by argmax estimate
+            postq = self.target_model.fprop(self.input, inference=True).asnumpyarray()
+            maxpostq = postq[max_idx[0], range(postq.shape[1])].reshape((1, -1))
+        else:
+            # feed-forward pass for poststates to get Q-values
+            postq = self.target_model.fprop(self.input, inference=True).asnumpyarray()
+
+            # calculate max Q-value for each poststate
+            maxpostq = self.be.max(postq, axis=0).asnumpyarray()
+
+        assert postq.shape == (self.num_actions, self.batch_size)
         assert maxpostq.shape == (1, self.batch_size)
 
         # feed-forward pass for prestates
