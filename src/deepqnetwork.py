@@ -126,7 +126,7 @@ class DeepQNetwork:
             maxpostq = postq[max_idx[0], range(postq.shape[1])].reshape((1, -1))
         else:
             # feed-forward pass for poststates to get Q-values
-            postq = self.target_model.fprop(self.input, inference=True).asnumpyarray()
+            postq = self.target_model.fprop(self.input, inference=True)
 
             # calculate max Q-value for each poststate
             maxpostq = self.be.max(postq, axis=0).asnumpyarray()
