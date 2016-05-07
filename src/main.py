@@ -45,8 +45,8 @@ netarg.add_argument("--decay_rate", type=float, default=0.95, help="Decay rate f
 netarg.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay for regularization")
 netarg.add_argument("--clip_error", type=float, default=1, help="Clip error term in update between this number and its negative.")
 netarg.add_argument("--target_steps", type=int, default=10000, help="Copy main network to target network after this many steps.")
-netarg.add_argument("--batch_norm", dest="batch_norm", type=str2bool, default=True, help="Enable batch normalization")
-netarg.add_argument("--double_dqn", dest="double_dqn", type=str2bool, default=True, help="Enable Double Deep Q-Learning")
+netarg.add_argument("--batch_norm", dest="batch_norm", type=str2bool, default=False, help="Enable batch normalization")
+netarg.add_argument("--double_dqn", dest="double_dqn", type=str2bool, default=False, help="Enable Double Deep Q-Learning")
 
 neonarg = parser.add_argument_group('Neon')
 neonarg.add_argument('--backend', choices=['cpu', 'gpu'], default='gpu', help='backend type')
