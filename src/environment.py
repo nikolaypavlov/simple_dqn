@@ -131,6 +131,7 @@ class F9Environment(Environment):
         self.socket.connect((args.ip, args.port))
         self.actions = [[0,0,0,0], [1,0,0,0], [0,1,0,0], [0,0,1,0], [1,1,0,0], [0,1,1,0], [1,0,1,0], [1,1,1,0]]
         self.obs = None
+        self.frame_skip = args.frame_skip
 
     def _getObservation(self):
         # getting data from server
@@ -165,8 +166,9 @@ class F9Environment(Environment):
 
     def act(self, action):
         # act in the game environment
-        self.socket.send(str(self.actions[action]))
-        self.obs = self._getObservation()
+        for f in range(self.frame_skip):
+            self.socket.send(str(self.actions[action]))
+            self.obs = self._getObservation()
         return self._getReward()
 
     def getScreen(self):
