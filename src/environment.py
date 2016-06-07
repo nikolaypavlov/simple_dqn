@@ -2,6 +2,8 @@ import sys
 import os
 import logging
 import cv2
+import socket
+import numpy as np
 logger = logging.getLogger(__name__)
 
 class Environment:
@@ -122,3 +124,69 @@ class GymEnvironment(Environment):
     def isTerminal(self):
         assert self.terminal is not None
         return self.terminal
+
+class F9Environment(Environment):
+    def __init__(self, args):
+        self.socket = socket.socket()
+        self.socket.connect((args.ip, args.port))
+        self.actions = [[0,0,0,0], [1,0,0,0], [0,1,0,0], [0,0,1,0], [1,1,0,0], [0,1,1,0], [1,0,1,0], [1,1,1,0]]
+        self.obs = None
+
+    def _getObservation(self):
+        # getting data from server
+        data = eval(self.socket.recv(1024))
+        self.obs = None
+        if data:
+            agent = (item for item in data if item["type"] == "actor").next()
+            platform = (item for item in data if item["type"] == "decoration").next()
+            system = (item for item in data if item["type"] == "system").next()
+            self.obs = (agent, platform, system)
+
+        return self.obs
+
+    def _getReward(self):
+        assert self.obs is not None
+        agent, _, system = self.obs
+        if system["flight_status"] == "landed":
+            reward = 1.0
+        elif self.isTerminal():
+            reward = -1.0
+        else:  # Remove this if you don't want to use handcrafted heuristic
+            reward = 1.0 / (1 + agent["dist"]) + agent["contact_time"]
+
+        return reward
+
+    def numActions(self):
+        return len(self.actions)
+
+    def restart(self):
+        self.socket.send(str([0, 0, 0, 1]))
+        self.obs = self._getObservation()
+
+    def act(self, action):
+        # act in the game environment
+        self.socket.send(str(self.actions[action]))
+        self.obs = self._getObservation()
+        return self._getReward()
+
+    def getScreen(self):
+        assert self.obs is not None
+        agent, _, _ = self.obs
+        features = np.array([agent['dist'],
+                             agent['angle'],
+                             agent['vx'],
+                             agent['vy'],
+                             agent['contact'],
+                             agent['wind'],
+                             agent['fuel']],
+                             dtype=np.float32)
+        return features.reshape((-1, 1))
+
+    def isTerminal(self):
+        # system["flight_status"] | "none", "landed", "destroyed"
+        # "none" means that we don't know, whether we landed or destroyed
+        agent, _, system = self.obs
+        terminal = False
+        if system["flight_status"] == "destroyed" or system["flight_status"] == "landed" or agent["py"] <= 0.0:
+            terminal = True
+        return terminal

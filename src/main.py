@@ -1,7 +1,7 @@
 import logging
 logging.basicConfig(format='%(asctime)s %(message)s')
 
-from environment import ALEEnvironment, GymEnvironment
+from environment import ALEEnvironment, GymEnvironment, F9Environment
 from replay_memory import ReplayMemory
 from deep_q_network import DQN
 from deepqnetwork import DeepQNetwork
@@ -18,7 +18,7 @@ def str2bool(v):
 
 envarg = parser.add_argument_group('Environment')
 envarg.add_argument("game", help="ROM bin file or env id such as Breakout-v0 if training with Open AI Gym.")
-envarg.add_argument("--environment", choices=["ale", "gym"], default="ale", help="Whether to train agent using ALE or OpenAI Gym.")
+envarg.add_argument("--environment", choices=["ale", "gym", "f9"], default="ale", help="Whether to train agent using ALE, OpenAI Gym or F9.")
 envarg.add_argument("--display_screen", type=str2bool, default=False, help="Display game screen during training and testing.")
 envarg.add_argument("--frame_skip", type=int, default=4, help="How many times to repeat each chosen action.")
 envarg.add_argument("--repeat_action_probability", type=float, default=0, \
@@ -29,12 +29,16 @@ envarg.add_argument("--screen_width", type=int, default=84, help="Screen width a
 envarg.add_argument("--screen_height", type=int, default=84, help="Screen height after resize.")
 envarg.add_argument("--record_screen_path", help="Record game screens under this path. Subfolder for each game is created.")
 envarg.add_argument("--record_sound_filename", help="Record game sound in this file.")
+envarg.add_argument("--ip", type=str, default="127.0.0.1", help="IP address of F9Lander server")
+envarg.add_argument("--port", type=int, default=50007, help="Port to connect to F9Lander server")
 
 memarg = parser.add_argument_group('Replay memory')
 memarg.add_argument("--replay_size", type=int, default=1000000, help="Maximum size of replay memory.")
 memarg.add_argument("--history_length", type=int, default=4, help="How many screen frames form a state.")
 memarg.add_argument("--min_reward", type=float, default=-1, help="Minimum reward.")
 memarg.add_argument("--max_reward", type=float, default=1, help="Maximum reward.")
+memarg.add_argument("--pixel_type", choices=["uint8", "float32"], default="uint8", help="Default precision for screen storage")
+memarg.add_argument("--reward_type", choices=["int", "float16"], default="int", help="Precision for reward storage")
 
 netarg = parser.add_argument_group('Deep Q-learning network')
 netarg.add_argument("--learning_rate", type=float, default=0.00025, help="Learning rate.")
@@ -99,6 +103,9 @@ elif args.environment == 'gym':
     logger.handlers.pop()
     env = GymEnvironment(args.game, args)
     logger.info("Using Gym Environment")
+elif args.environment == 'f9':
+    env = F9Environment(args)
+    logger.info("Using F9 Environment")
 else:
     assert False, "Unknown environment" + args.environment
 
