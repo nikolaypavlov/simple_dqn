@@ -129,7 +129,7 @@ class F9Environment(Environment):
     def __init__(self, args):
         self.socket = socket.socket()
         self.socket.connect((args.ip, args.port))
-        self.actions = [[0,0,0,0], [1,0,0,0], [0,1,0,0], [0,0,1,0], [1,1,0,0], [0,1,1,0], [1,0,1,0], [1,1,1,0]]
+        self.actions = [[0,0,0,0], [1,1,0,0], [0,1,1,0], [1,1,1,0]]
         self.obs = None
         self.frame_skip = args.frame_skip
 
