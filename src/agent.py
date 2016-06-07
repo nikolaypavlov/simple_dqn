@@ -26,13 +26,14 @@ class Agent:
     def _restartRandom(self):
         self.env.restart()
         # perform random number of dummy actions to produce more stochastic games
-        for i in xrange(random.randint(self.history_length, self.random_starts) + 1):
-            reward = self.env.act(0)
-            screen = self.env.getScreen()
-            terminal = self.env.isTerminal()
-            assert not terminal, "terminal state occurred during random initialization"
-            # add dummy states to buffer to guarantee history_length screens
-            self.mem.add(0, reward, screen, terminal)
+        if self.history_length < self.random_starts or self.random_starts != 0:
+            for i in xrange(random.randint(self.history_length, self.random_starts) + 1):
+                reward = self.env.act(random.choice(range(self.num_actions)))
+                screen = self.env.getScreen()
+                terminal = self.env.isTerminal()
+                assert not terminal, "terminal state occurred during random initialization"
+                # add dummy states to buffer to guarantee history_length screens
+                self.mem.add(0, reward, screen, terminal)
 
     def _exploration_rate(self):
         # calculate decaying exploration rate
