@@ -33,7 +33,8 @@ class DeepQNetwork:
                                  stochastic_round=args.stochastic_round)
 
         # prepare tensors once and reuse them
-        self.input_shape = (self.history_length,) + self.screen_dim + (self.batch_size,)
+        # self.input_shape = (self.history_length,) + self.screen_dim + (self.batch_size,)
+        self.input_shape = (self.history_length * max(self.screen_dim), ) + (self.batch_size,)
         self.input = self.be.empty(self.input_shape)
         self.input.lshape = self.input_shape # HACK: needed for convolutional networks
         self.targets = self.be.empty((self.num_actions, self.batch_size))
@@ -78,13 +79,6 @@ class DeepQNetwork:
         # create network
         init_norm = Gaussian(loc=0.0, scale=0.01)
         layers = []
-        # The first hidden layer convolves 32 filters of 8x8 with stride 4 with the input image and applies a rectifier nonlinearity.
-        layers.append(Conv((8, 8, 32), strides=4, init=init_norm, activation=Rectlin(), batch_norm=self.batch_norm))
-        # The second hidden layer convolves 64 filters of 4x4 with stride 2, again followed by a rectifier nonlinearity.
-        layers.append(Conv((4, 4, 64), strides=2, init=init_norm, activation=Rectlin(), batch_norm=self.batch_norm))
-        # This is followed by a third convolutional layer that convolves 64 filters of 3x3 with stride 1 followed by a rectifier.
-        layers.append(Conv((3, 3, 64), strides=1, init=init_norm, activation=Rectlin(), batch_norm=self.batch_norm))
-        # The final hidden layer is fully-connected and consists of 512 rectifier units.
         layers.append(Affine(nout=512, init=init_norm, activation=Rectlin(), batch_norm=self.batch_norm))
         # The output layer is a fully-connected linear layer with a single output for each valid action.
         layers.append(Affine(nout=num_actions, init=init_norm))
@@ -92,11 +86,12 @@ class DeepQNetwork:
 
     def _setInput(self, states):
         # change order of axes to match what Neon expects
-        states = np.transpose(states, axes=(1, 2, 3, 0))
+        states = states.reshape(self.batch_size, -1)
+        states = np.transpose(states, axes=(1, 0))
         # copy() shouldn't be necessary here, but Neon doesn't work otherwise
         self.input.set(states.copy())
         # normalize network input between 0 and 1
-        self.be.divide(self.input, 255, self.input)
+        # self.be.divide(self.input, 255, self.input)
 
     def train(self, minibatch, epoch):
         # expand components of minibatch
@@ -140,7 +135,7 @@ class DeepQNetwork:
         assert preq.shape == (self.num_actions, self.batch_size)
 
         # make copy of prestate Q-values as targets
-        targets = preq.asnumpyarray()
+        targets = np.copy(preq.asnumpyarray())
 
         # update Q-value targets for actions taken
         for i, action in enumerate(actions):
