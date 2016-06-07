@@ -8,8 +8,8 @@ class ReplayMemory:
     self.size = size
     # preallocate memory
     self.actions = np.empty(self.size, dtype = np.uint8)
-    self.rewards = np.empty(self.size, dtype = np.integer)
-    self.screens = np.empty((self.size, args.screen_height, args.screen_width), dtype = np.uint8)
+    self.rewards = np.empty(self.size, dtype = np.dtype(args.reward_type).type)
+    self.screens = np.empty((self.size, args.screen_height, args.screen_width), dtype = np.dtype(args.pixel_type).type)
     self.terminals = np.empty(self.size, dtype = np.bool)
     self.history_length = args.history_length
     self.dims = (args.screen_height, args.screen_width)
@@ -20,8 +20,8 @@ class ReplayMemory:
     self.current = 0
 
     # pre-allocate prestates and poststates for minibatch
-    self.prestates = np.empty((self.batch_size, self.history_length) + self.dims, dtype = np.uint8)
-    self.poststates = np.empty((self.batch_size, self.history_length) + self.dims, dtype = np.uint8)
+    self.prestates = np.empty((self.batch_size, self.history_length) + self.dims, dtype = np.dtype(args.pixel_type).type)
+    self.poststates = np.empty((self.batch_size, self.history_length) + self.dims, dtype = np.dtype(args.pixel_type).type)
 
     logger.info("Replay memory size: %d" % self.size)
 
@@ -45,7 +45,6 @@ class ReplayMemory:
     self.current = (self.current + 1) % self.size
     #logger.debug("Memory count %d" % self.count)
 
-  
   def getState(self, index):
     assert self.count > 0, "replay memory is empy, use at least --random_steps 1"
     # normalize index to expected range, allows negative indexes
@@ -70,9 +69,9 @@ class ReplayMemory:
     # sample random indexes
     indexes = []
     while len(indexes) < self.batch_size:
-      # find random index 
+      # find random index
       while True:
-        # sample one index (ignore states wraping over 
+        # sample one index (ignore states wraping over
         index = random.randint(self.history_length, self.count - 1)
         # if wraps over current pointer, then get new one
         if index >= self.current and index - self.history_length < self.current:
@@ -83,7 +82,7 @@ class ReplayMemory:
           continue
         # otherwise use this index
         break
-      
+
       # NB! having index first is fastest in C-order matrices
       self.prestates[len(indexes), ...] = self.getState(index - 1)
       self.poststates[len(indexes), ...] = self.getState(index)
