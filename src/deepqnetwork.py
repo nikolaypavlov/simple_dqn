@@ -80,6 +80,7 @@ class DeepQNetwork:
         init_norm = Gaussian(loc=0.0, scale=0.01)
         layers = []
         layers.append(Affine(nout=512, init=init_norm, activation=Rectlin(), batch_norm=self.batch_norm))
+        layers.append(Affine(nout=256, init=init_norm, activation=Rectlin(), batch_norm=self.batch_norm))
         # The output layer is a fully-connected linear layer with a single output for each valid action.
         layers.append(Affine(nout=num_actions, init=init_norm))
         return layers
