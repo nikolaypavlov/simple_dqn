@@ -55,13 +55,13 @@ class Statistics:
 
     # callback for agent
     def on_step(self, action, reward, terminal, screen, exploration_rate):
-        self.game_rewards += reward
+        self.game_rewards += float(reward)
         self.num_steps += 1
         self.last_exploration_rate = exploration_rate
 
         if terminal:
             self.num_games += 1
-            self.average_reward += float(self.game_rewards - self.average_reward) / self.num_games
+            self.average_reward += (self.game_rewards - self.average_reward) / self.num_games
             self.min_game_reward = min(self.min_game_reward, self.game_rewards)
             self.max_game_reward = max(self.max_game_reward, self.game_rewards)
             self.game_rewards = 0
@@ -112,7 +112,7 @@ class Statistics:
                                       ))
             self.csv_file.flush()
 
-        logger.info("  num_games: %d, average_reward: %f, min_game_reward: %d, max_game_reward: %d" %
+        logger.info("  num_games: %d, average_reward: %f, min_game_reward: %f, max_game_reward: %f" %
                     (self.num_games, self.average_reward, self.min_game_reward, self.max_game_reward))
         logger.info("  last_exploration_rate: %f, epoch_time: %ds, steps_per_second: %d" %
                     (self.last_exploration_rate, epoch_time, steps_per_second))
