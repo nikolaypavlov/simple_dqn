@@ -1,6 +1,6 @@
 from neon.util.argparser import NeonArgparser
 from neon.backends import gen_backend
-from neon.initializers import Gaussian
+from neon.initializers import GlorotUniform
 from neon.optimizers import RMSProp, Adam, Adadelta
 from neon.layers import Affine, Conv, GeneralizedCost
 from neon.transforms import Rectlin
@@ -77,10 +77,11 @@ class DeepQNetwork:
 
     def _createLayers(self, num_actions):
         # create network
-        init_norm = Gaussian(loc=0.0, scale=0.01)
+        init_norm = GlorotUniform()
         layers = []
         layers.append(Affine(nout=512, init=init_norm, activation=Rectlin(), batch_norm=self.batch_norm))
         layers.append(Affine(nout=256, init=init_norm, activation=Rectlin(), batch_norm=self.batch_norm))
+        layers.append(Affine(nout=64, init=init_norm, activation=Rectlin(), batch_norm=self.batch_norm))
         # The output layer is a fully-connected linear layer with a single output for each valid action.
         layers.append(Affine(nout=num_actions, init=init_norm))
         return layers
