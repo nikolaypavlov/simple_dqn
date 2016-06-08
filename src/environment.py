@@ -153,7 +153,7 @@ class F9Environment(Environment):
         elif self.isTerminal():
             reward = -1.0
         else:  # Remove this if you don't want to use handcrafted heuristic
-            reward = 1.0 / (1 + agent["dist"]) + agent["contact_time"]
+            reward = 1.0 / (1 + agent["dist"] + 100 * agent["angle"] ** 2) + agent["contact_time"]
 
         return reward
 
@@ -166,22 +166,20 @@ class F9Environment(Environment):
 
     def act(self, action):
         # act in the game environment
-        for f in range(self.frame_skip):
+        for f in range(self.frame_skip + 1):
             self.socket.send(str(self.actions[action]))
             self.obs = self._getObservation()
         return self._getReward()
 
     def getScreen(self):
         assert self.obs is not None
-        agent, _, _ = self.obs
+        agent, platform, _ = self.obs
         features = np.array([agent['dist'],
                              agent['angle'],
-                             agent['vx'],
                              agent['vy'],
-                             agent['px'],
                              agent['contact'],
-                             agent['wind'],
-                             agent['fuel']],
+                             np.sign(agent['wind']),
+                             float(agent['fuel'] > 0)],
                              dtype=np.float32)
         return features.reshape((-1, 1))
 
