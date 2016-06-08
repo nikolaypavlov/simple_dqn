@@ -178,6 +178,7 @@ class F9Environment(Environment):
                              agent['angle'],
                              agent['vx'],
                              agent['vy'],
+                             agent['px'],
                              agent['contact'],
                              agent['wind'],
                              agent['fuel']],
