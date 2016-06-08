@@ -1,9 +1,9 @@
 import argparse
 import math
 import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
 parser.add_argument("csv_file")
@@ -18,7 +18,7 @@ args = parser.parse_args()
 
 # field definitions for numpy
 dtype = [
-  ("epoch", "int"), 
+  ("epoch", "int"),
   ("phase", "S6"),
   ("steps", "int"),
   ("nr_games", "int"),
@@ -44,7 +44,7 @@ test_idx = data['phase'] == 'test'
 
 # definitions for plot titles
 labels = {
-  "epoch": "Epoch", 
+  "epoch": "Epoch",
   "phase": "Phase",
   "steps": "Number of steps",
   "nr_games": "Number of games",
