@@ -175,8 +175,8 @@ class F9Environment(Environment):
         assert self.obs is not None
         agent, platform, _ = self.obs
         features = np.array([agent['angle'],
-                             (agent['py'] - platform['py']) ** 2,
-                             (agent['px'] - platform['px']) ** 2,
+                             agent['py'] * platform['py'],
+                             agent['px'] * platform['px'],
                              np.sign(agent['wind']),
                              float(agent['fuel'] > 0)],
                              dtype=np.float32)
