@@ -153,7 +153,7 @@ class F9Environment(Environment):
         elif self.isTerminal():
             reward = -1.0
         else:  # Remove this if you don't want to use handcrafted heuristic
-            reward = 1.0 / np.sqrt((agent["px"] - platform["px"]) ** 2 \
+            reward = 1.0 / np.sqrt(agent["angle"] ** 2 + (agent["px"] - platform["px"]) ** 2 \
                                     + (agent["py"] - agent["py"]) ** 2) + agent["contact_time"]
 
         return reward
