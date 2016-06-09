@@ -147,13 +147,13 @@ class F9Environment(Environment):
 
     def _getReward(self):
         assert self.obs is not None
-        agent, _, system = self.obs
+        agent, platform, system = self.obs
         if system["flight_status"] == "landed":
             reward = 1.0
         elif self.isTerminal():
             reward = -1.0
         else:  # Remove this if you don't want to use handcrafted heuristic
-            reward = 1.0 / (1 + agent["dist"] + 100 * agent["angle"] ** 2) + agent["contact_time"]
+            reward = 1.0 / (1 + (agent["px"] - platform["px"]) ** 2 + (agent["py"] - agent["py"]) ** 2) + agent["contact_time"]
 
         return reward
 
@@ -174,10 +174,9 @@ class F9Environment(Environment):
     def getScreen(self):
         assert self.obs is not None
         agent, platform, _ = self.obs
-        features = np.array([agent['dist'],
-                             agent['angle'],
-                             agent['vy'],
-                             agent['contact'],
+        features = np.array([agent['angle'],
+                             (agent['py'] - platform['py']) ** 2,
+                             (agent['px'] - platform['px']) ** 2,
                              np.sign(agent['wind']),
                              float(agent['fuel'] > 0)],
                              dtype=np.float32)
