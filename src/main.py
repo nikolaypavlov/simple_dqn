@@ -51,6 +51,7 @@ netarg.add_argument("--clip_error", type=float, default=1, help="Clip error term
 netarg.add_argument("--target_steps", type=int, default=10000, help="Copy main network to target network after this many steps.")
 netarg.add_argument("--batch_norm", dest="batch_norm", type=str2bool, default=False, help="Enable batch normalization")
 netarg.add_argument("--double_dqn", dest="double_dqn", type=str2bool, default=False, help="Enable Double Deep Q-Learning")
+netarg.add_argument("--lstm", dest="lstm", type=str2bool, default=False, help="Create LSTM based model")
 
 neonarg = parser.add_argument_group('Neon')
 neonarg.add_argument('--backend', choices=['cpu', 'gpu'], default='gpu', help='backend type')

@@ -2,10 +2,10 @@ from neon.util.argparser import NeonArgparser
 from neon.backends import gen_backend
 from neon.initializers import GlorotUniform
 from neon.optimizers import RMSProp, Adam, Adadelta
-from neon.layers import Affine, Conv, GeneralizedCost
-from neon.transforms import Rectlin
+from neon.layers import Affine, Conv, GeneralizedCost, LSTM, RecurrentSum, RecurrentLast
+from neon.transforms import Rectlin, Logistic, Tanh, Identity
 from neon.models import Model
-from neon.transforms import SumSquared
+from neon.transforms import SumSquared, MeanSquared
 from neon.util.persist import save_obj
 import numpy as np
 import os
@@ -23,6 +23,7 @@ class DeepQNetwork:
         self.clip_error = args.clip_error
         self.batch_norm = args.batch_norm
         self.double_dqn = args.double_dqn
+        self.lstm = args.lstm
 
         # create Neon backend
         self.be = gen_backend(backend=args.backend,
@@ -34,19 +35,22 @@ class DeepQNetwork:
 
         # prepare tensors once and reuse them
         # self.input_shape = (self.history_length,) + self.screen_dim + (self.batch_size,)
-        self.input_shape = (self.history_length * max(self.screen_dim), ) + (self.batch_size,)
-        self.input = self.be.empty(self.input_shape)
-        self.input.lshape = self.input_shape # HACK: needed for convolutional networks
-        self.targets = self.be.empty((self.num_actions, self.batch_size))
+        self.input_shape = (max(self.screen_dim), self.history_length) if self.lstm else (self.history_length * max(self.screen_dim), )
+        if self.lstm:
+            self.input = self.be.iobuf((max(self.screen_dim), self.history_length))
+        else:
+            self.input = self.be.iobuf(max(self.screen_dim) * self.history_length)
+        # self.input.lshape = self.input_shape # HACK: needed for convolutional networks
+        self.targets = self.be.iobuf(self.num_actions)
 
         # create model
-        layers = self._createLayers(num_actions)
+        layers = self._createLSTM(num_actions) if self.lstm else self._createMLP(num_actions)
         self.model = Model(layers=layers)
-        self.cost = GeneralizedCost(costfunc=SumSquared())
+        self.cost = GeneralizedCost(costfunc=MeanSquared())
         # Bug fix
         for l in self.model.layers.layers:
             l.parallelism = 'Disabled'
-        self.model.initialize(self.input_shape[:-1], self.cost)
+        self.model.initialize(self.input_shape, self.cost)
         if args.optimizer == 'rmsprop':
             self.optimizer = RMSProp(learning_rate=args.learning_rate,
                                      decay_rate=args.decay_rate,
@@ -64,32 +68,43 @@ class DeepQNetwork:
         self.target_steps = args.target_steps
         self.train_iterations = 0
         if self.target_steps:
-            self.target_model = Model(layers=self._createLayers(num_actions))
+            layers = self._createLSTM(num_actions) if self.lstm else self._createMLP(num_actions)
+            self.target_model = Model(layers=layers)
             # Bug fix
             for l in self.target_model.layers.layers:
                 l.parallelism = 'Disabled'
-            self.target_model.initialize(self.input_shape[:-1])
+            self.target_model.initialize(self.input_shape)
             self.save_weights_prefix = args.save_weights_prefix
         else:
             self.target_model = self.model
 
         self.callback = None
 
-    def _createLayers(self, num_actions):
+    def _createMLP(self, num_actions):
         # create network
-        init_norm = GlorotUniform()
+        init_glorot = GlorotUniform()
         layers = []
-        layers.append(Affine(nout=512, init=init_norm, activation=Rectlin(), batch_norm=self.batch_norm))
-        layers.append(Affine(nout=256, init=init_norm, activation=Rectlin(), batch_norm=self.batch_norm))
-        layers.append(Affine(nout=64, init=init_norm, activation=Rectlin(), batch_norm=self.batch_norm))
+        layers.append(Affine(nout=512, init=init_glorot, activation=Rectlin(), batch_norm=self.batch_norm))
+        layers.append(Affine(nout=256, init=init_glorot, activation=Rectlin(), batch_norm=self.batch_norm))
+        layers.append(Affine(nout=64, init=init_glorot, activation=Rectlin(), batch_norm=self.batch_norm))
         # The output layer is a fully-connected linear layer with a single output for each valid action.
-        layers.append(Affine(nout=num_actions, init=init_norm))
+        layers.append(Affine(nout=num_actions, init=init_glorot))
+        return layers
+
+    def _createLSTM(self, num_actions):
+        # create network
+        init_glorot = GlorotUniform()
+        layers = []
+        layers.append(LSTM(128, init=init_glorot, activation=Tanh(), gate_activation=Logistic(), reset_cells=True))
+        layers.append(RecurrentLast())
+        layers.append(Affine(nout=num_actions, init=init_glorot, bias=init_glorot, activation=Identity()))
         return layers
 
     def _setInput(self, states):
         # change order of axes to match what Neon expects
-        states = states.reshape(self.batch_size, -1)
-        states = np.transpose(states, axes=(1, 0))
+        # states = states.reshape(self.batch_size * self.history_length, -1) if self.lstm else states.reshape(self.batch_size, -1)
+        states = states.reshape(self.input.shape[::-1]).T if self.lstm else states.reshape(self.batch_size, -1)
+        # states = np.transpose(states, axes=(1, 0))
         # copy() shouldn't be necessary here, but Neon doesn't work otherwise
         self.input.set(states.copy())
         # normalize network input between 0 and 1
@@ -190,7 +205,7 @@ class DeepQNetwork:
         return qvalues.T.asnumpyarray()
 
     def load_weights(self, load_path):
-        self.model.load_weights(load_path)
+        self.model.load_params(load_path)
 
     def save_weights(self, save_path):
-        save_obj(self.model.serialize(keep_states=True), save_path)
+        self.model.save_params(save_path)
