@@ -2,7 +2,7 @@ from neon.util.argparser import NeonArgparser
 from neon.backends import gen_backend
 from neon.initializers import GlorotUniform
 from neon.optimizers import RMSProp, Adam, Adadelta
-from neon.layers import Affine, Conv, GeneralizedCost, LSTM, RecurrentSum, RecurrentLast
+from neon.layers import Affine, Conv, GeneralizedCost, LSTM, RecurrentSum, RecurrentLast, Dropout
 from neon.transforms import Rectlin, Logistic, Tanh, Identity
 from neon.models import Model
 from neon.transforms import SumSquared, MeanSquared
@@ -96,7 +96,9 @@ class DeepQNetwork:
         init_glorot = GlorotUniform()
         layers = []
         layers.append(LSTM(128, init=init_glorot, activation=Tanh(), gate_activation=Logistic(), reset_cells=True))
-        layers.append(RecurrentLast())
+        layers.append(LSTM(128, init=init_glorot, activation=Tanh(), gate_activation=Logistic(), reset_cells=True))
+        layers.append(RecurrentSum())
+        layers.append(Dropout(0.5))
         layers.append(Affine(nout=num_actions, init=init_glorot, bias=init_glorot, activation=Identity()))
         return layers
 
